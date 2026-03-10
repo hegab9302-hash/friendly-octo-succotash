@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Before / After Viewer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0f0f10;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .app {
+      width: min(1100px, 100%);
+      display: grid;
+      gap: 20px;
+    }
+    .panel {
+      background: #17181c;
+      border: 1px solid #2b2d33;
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.28);
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #c9cbd2;
+    }
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid #31343d;
+      background: #111216;
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 12px;
+      outline: none;
+    }
+    input[type="text"]:focus,
+    input[type="range"]:focus {
+      border-color: #7aa2ff;
+      box-shadow: 0 0 0 3px rgba(122,162,255,.15);
+    }
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      border-radius: 24px;
+      background: #0b0c0f;
+      border: 1px solid #2b2d33;
+      user-select: none;
+      touch-action: none;
+    }
+    .image-layer,
+    .image-layer img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .image-layer img {
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+    .after-wrap {
+      position: absolute;
+      inset: 0;
+      width: 50%;
+      overflow: hidden;
+      border-left: 2px solid rgba(255,255,255,.9);
+    }
+    .after-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: right center;
+    }
+    .divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      left: 50%;
+      pointer-events: none;
+    }
+    .handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      background: rgba(20,21,26,.92);
+      border: 2px solid rgba(255,255,255,.95);
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .badge {
+      position: absolute;
+      top: 16px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      background: rgba(15,15,16,.72);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+    }
+    .before-badge { right: 16px; }
+    .after-badge { left: 16px; }
+    .range-wrap {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #fff;
+      cursor: ew-resize;
+    }
+    .hint {
+      color: #a9adb8;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #8d93a1;
+    }
+    @media (max-width: 700px) {
+      .handle { width: 50px; height: 50px; font-size: 18px; }
+      .badge { font-size: 12px; padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <div class="controls">
+        <div>
+          <label for="beforeUrl">رابط صورة قبل</label>
+          <input id="beforeUrl" type="text" placeholder="https://example.com/before.jpg" />
+        </div>
+        <div>
+          <label for="afterUrl">رابط صورة بعد</label>
+          <input id="afterUrl" type="text" placeholder="https://example.com/after.jpg" />
+        </div>
+      </div>
+      <div class="range-wrap">
+        <label for="slider">موضع المقارنة</label>
+        <input id="slider" type="range" min="0" max="100" value="50" />
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="stage" class="stage" aria-label="Before and After comparison">
+        <div class="image-layer">
+          <img id="beforeImg" alt="Before image" src="" />
+          <div class="badge before-badge">قبل</div>
+        </div>
+
+        <div id="afterWrap" class="after-wrap">
+          <img id="afterImg" alt="After image" src="" />
+          <div class="badge after-badge">بعد</div>
+        </div>
+
+        <div id="divider" class="divider">
+          <div class="handle">↔</div>
+        </div>
+      </div>
+      <p class="hint">
+        اسحب الخط يمين وشمال أو استخدم السلايدر تحت. الصفحة شغالة من غير أي مكتبات، وتقدر ترفعها على أي استضافة وتستخدم الرابط داخل Behance.
+      </p>
+    </div>
+
+    <div class="footer">Standalone Before / After Viewer</div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    const beforeUrlInput = document.getElementById('beforeUrl');
+    const afterUrlInput = document.getElementById('afterUrl');
+    const beforeImg = document.getElementById('beforeImg');
+    const afterImg = document.getElementById('afterImg');
+    const slider = document.getElementById('slider');
+    const afterWrap = document.getElementById('afterWrap');
+    const divider = document.getElementById('divider');
+    const stage = document.getElementById('stage');
+
+    const fallbackBefore = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1400&q=80';
+    const fallbackAfter = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1400&q=80';
+
+    function setImages(beforeSrc, afterSrc) {
+      beforeImg.src = beforeSrc || fallbackBefore;
+      afterImg.src = afterSrc || fallbackAfter;
+      beforeUrlInput.value = beforeSrc || '';
+      afterUrlInput.value = afterSrc || '';
+    }
+
+    function updateSplit(value) {
+      const percent = Math.max(0, Math.min(100, Number(value) || 50));
+      afterWrap.style.width = percent + '%';
+      divider.style.left = percent + '%';
+      slider.value = percent;
+    }
+
+    function updateFromInputs() {
+      const beforeSrc = beforeUrlInput.value.trim();
+      const afterSrc = afterUrlInput.value.trim();
+      beforeImg.src = beforeSrc || fallbackBefore;
+      afterImg.src = afterSrc || fallbackAfter;
+
+      const url = new URL(window.location.href);
+      if (beforeSrc) url.searchParams.set('before', beforeSrc); else url.searchParams.delete('before');
+      if (afterSrc) url.searchParams.set('after', afterSrc); else url.searchParams.delete('after');
+      url.searchParams.set('position', slider.value);
+      history.replaceState({}, '', url);
+    }
+
+    function positionFromPointer(clientX) {
+      const rect = stage.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const percent = (x / rect.width) * 100;
+      updateSplit(percent);
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('position', String(Math.round(percent)));
+      history.replaceState({}, '', url);
+    }
+
+    let isDragging = false;
+
+    stage.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      stage.setPointerCapture(e.pointerId);
+      positionFromPointer(e.clientX);
+    });
+
+    stage.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      positionFromPointer(e.clientX);
+    });
+
+    stage.addEventListener('pointerup', () => {
+      isDragging = false;
+    });
+
+    stage.addEventListener('pointercancel', () => {
+      isDragging = false;
+    });
+
+    slider.addEventListener('input', (e) => {
+      updateSplit(e.target.value);
+      const url = new URL(window.location.href);
+      url.searchParams.set('position', e.target.value);
+      history.replaceState({}, '', url);
+    });
+
+    beforeUrlInput.addEventListener('change', updateFromInputs);
+    afterUrlInput.addEventListener('change', updateFromInputs);
+
+    const beforeParam = params.get('before') || '';
+    const afterParam = params.get('after') || '';
+    const positionParam = params.get('position') || '50';
+
+    setImages(beforeParam, afterParam);
+    updateSplit(positionParam);
+  </script>
+</body>
+</html>
